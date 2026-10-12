@@ -1,6 +1,12 @@
-import { Component, OnInit } from '@angular/core';
-import { FAccount, EAccountType } from '../shared/model/account.model';
-import { AccountHttpService } from '../core/http/account.http.service';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+interface FAccount {
+  AccountId: number;
+  Name: string;
+  AccountType: number;
+  IsActive: boolean;
+}
 
 @Component({
   selector: 'app-account',
@@ -8,7 +14,7 @@ import { AccountHttpService } from '../core/http/account.http.service';
   template: `
     <div class="container py-4">
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="fas fa-university me-2"></i>Accounts</h2>
+        <h2 style="color: var(--sr-purple-glow)"><i class="fas fa-university me-2"></i>Accounts</h2>
         <button class="btn btn-primary" (click)="startCreate()">
           <i class="fas fa-plus me-1"></i>Add Account
         </button>
@@ -35,7 +41,7 @@ import { AccountHttpService } from '../core/http/account.http.service';
             </div>
             <div class="mt-3">
               <button class="btn btn-success me-2" (click)="save()">Save</button>
-              <button class="btn btn-secondary" (click)="cancel()">Cancel</button>
+              <button class="btn btn-outline-secondary" (click)="cancel()">Cancel</button>
             </div>
           </div>
         </div>
@@ -44,13 +50,13 @@ import { AccountHttpService } from '../core/http/account.http.service';
       <div class="card">
         <div class="table-responsive">
           <table class="table table-hover mb-0">
-            <thead class="table-light">
+            <thead>
               <tr><th>Name</th><th>Type</th><th>Status</th><th>Actions</th></tr>
             </thead>
             <tbody>
               @for (account of accounts; track account.AccountId) {
                 <tr>
-                  <td><strong>{{ account.Name }}</strong></td>
+                  <td style="font-weight: 600">{{ account.Name }}</td>
                   <td>{{ getTypeName(account.AccountType) }}</td>
                   <td>
                     <span class="badge" [class.bg-success]="account.IsActive" [class.bg-secondary]="!account.IsActive">
@@ -58,8 +64,8 @@ import { AccountHttpService } from '../core/http/account.http.service';
                     </span>
                   </td>
                   <td>
-                    <button class="btn btn-sm btn-outline-primary me-1" (click)="startEdit(account)">Edit</button>
-                    <button class="btn btn-sm btn-outline-danger" (click)="delete(account.AccountId)">Delete</button>
+                    <button class="btn btn-sm btn-outline-secondary me-1" (click)="startEdit(account)">Edit</button>
+                    <button class="btn btn-sm btn-outline-secondary" (click)="deactivate(account.AccountId)">Deactivate</button>
                   </td>
                 </tr>
               }
@@ -75,30 +81,34 @@ export class AccountComponent implements OnInit {
   editing = false;
   form: Partial<FAccount> = {};
 
-  constructor(private accountHttp: AccountHttpService) {}
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() { this.load(); }
 
-  load() { this.accountHttp.getAll().subscribe(a => this.accounts = a); }
+  load() {
+    this.http.get<FAccount[]>('api/account').subscribe({
+      next: a => { this.accounts = a; this.cdr.detectChanges(); }
+    });
+  }
 
-  startCreate() { this.form = { AccountType: EAccountType.Checking, IsActive: true }; this.editing = true; }
+  startCreate() { this.form = { AccountType: 1, IsActive: true }; this.editing = true; }
   startEdit(account: FAccount) { this.form = { ...account }; this.editing = true; }
   cancel() { this.editing = false; this.form = {}; }
 
   save() {
     if (this.form.AccountId) {
-      this.accountHttp.update(this.form.AccountId, this.form).subscribe(() => { this.load(); this.cancel(); });
+      this.http.put(`api/account/${this.form.AccountId}`, this.form).subscribe(() => { this.load(); this.cancel(); });
     } else {
-      this.accountHttp.create(this.form).subscribe(() => { this.load(); this.cancel(); });
+      this.http.post('api/account', this.form).subscribe(() => { this.load(); this.cancel(); });
     }
   }
 
-  delete(id: number) {
+  deactivate(id: number) {
     if (confirm('Deactivate this account?'))
-      this.accountHttp.remove(id).subscribe(() => this.load());
+      this.http.delete(`api/account/${id}`).subscribe(() => this.load());
   }
 
-  getTypeName(type: EAccountType): string {
-    return { [EAccountType.Checking]: 'Checking', [EAccountType.CreditCard]: 'Credit Card', [EAccountType.Cash]: 'Cash', [EAccountType.Savings]: 'Savings' }[type] ?? 'Unknown';
+  getTypeName(type: number): string {
+    return { 1: 'Checking', 2: 'Credit Card', 3: 'Cash', 4: 'Savings' }[type] ?? 'Unknown';
   }
 }

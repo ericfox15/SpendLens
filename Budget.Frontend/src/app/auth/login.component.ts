@@ -1,6 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { AuthHttpService } from '../core/http/pass.http.service';
 
 @Component({
   selector: 'app-login',
@@ -45,12 +45,15 @@ export class LoginComponent {
   error = '';
   loading = false;
 
-  constructor(private authHttp: AuthHttpService, private router: Router) {}
+  constructor(private http: HttpClient, private router: Router, private cdr: ChangeDetectorRef) {}
 
   login() {
     this.loading = true;
     this.error = '';
-    this.authHttp.login(this.username, this.password).subscribe({
+    this.http.post<{ Token: string }>('api/authentication/login', {
+      Username: this.username,
+      Password: this.password
+    }).subscribe({
       next: res => {
         localStorage.setItem('budget_token', res.Token);
         this.router.navigate(['/dashboard']);
@@ -58,6 +61,7 @@ export class LoginComponent {
       error: () => {
         this.error = 'Invalid username or password.';
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

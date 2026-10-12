@@ -1,6 +1,13 @@
-import { Component, OnInit } from '@angular/core';
-import { CategorySpendReport } from '../shared/model/account.model';
-import { ReportHttpService } from '../core/http/pass.http.service';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+interface CategorySpendRow {
+  CategoryId: number;
+  CategoryName: string;
+  TotalSpent: number;
+  Percentage: number;
+  MonthlyLimit?: number;
+}
 
 @Component({
   selector: 'app-report',
@@ -38,24 +45,21 @@ import { ReportHttpService } from '../core/http/pass.http.service';
             @for (row of rows; track row.CategoryId) {
               <div class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                  <span><strong>{{ row.CategoryName }}</strong></span>
+                  <span style="font-weight: 600">{{ row.CategoryName }}</span>
                   <span>
-                    \${{ row.TotalSpent | number:'1.2-2' }}
-                    <span class="text-muted ms-2">({{ row.Percentage }}%)</span>
+                    <span style="color: var(--sr-purple-glow)">\${{ row.TotalSpent | number:'1.2-2' }}</span>
+                    <span style="color: var(--sr-muted)" class="ms-2">({{ row.Percentage }}%)</span>
                     @if (row.MonthlyLimit) {
-                      <span class="ms-2" [class.text-danger]="row.TotalSpent > row.MonthlyLimit"
-                            [class.text-success]="row.TotalSpent <= row.MonthlyLimit">
+                      <span class="ms-2" [style.color]="row.TotalSpent > row.MonthlyLimit ? '#f87171' : '#34d399'">
                         / \${{ row.MonthlyLimit | number:'1.2-2' }} limit
                       </span>
                     }
                   </span>
                 </div>
-                <div class="progress" style="height: 20px">
+                <div class="progress" style="height: 10px">
                   <div class="progress-bar"
                        [class.bg-danger]="row.MonthlyLimit && row.TotalSpent > row.MonthlyLimit"
-                       [class.bg-success]="!row.MonthlyLimit || row.TotalSpent <= row.MonthlyLimit"
                        [style.width]="row.Percentage + '%'">
-                    {{ row.Percentage }}%
                   </div>
                 </div>
               </div>
@@ -65,7 +69,10 @@ import { ReportHttpService } from '../core/http/pass.http.service';
       }
 
       @if (rows.length === 0 && loaded) {
-        <div class="alert alert-info">No paid payments found for this period.</div>
+        <div class="text-center py-5" style="color: var(--sr-muted)">
+          <i class="fas fa-inbox fa-3x mb-3" style="color: var(--sr-border)"></i>
+          <p>No transactions found for this period.</p>
+        </div>
       }
     </div>
   `
@@ -73,7 +80,7 @@ import { ReportHttpService } from '../core/http/pass.http.service';
 export class ReportComponent implements OnInit {
   year = new Date().getFullYear();
   month = new Date().getMonth() + 1;
-  rows: CategorySpendReport[] = [];
+  rows: CategorySpendRow[] = [];
   totalSpent = 0;
   loaded = false;
 
@@ -86,15 +93,22 @@ export class ReportComponent implements OnInit {
     { value: 11, label: 'November' }, { value: 12, label: 'December' }
   ];
 
-  constructor(private reportHttp: ReportHttpService) {}
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() { this.load(); }
 
   load() {
-    this.reportHttp.getCategorySpend(this.year, this.month).subscribe(rows => {
-      this.rows = rows.filter(r => r.TotalSpent > 0);
-      this.totalSpent = this.rows.reduce((sum, r) => sum + r.TotalSpent, 0);
-      this.loaded = true;
+    this.http.get<CategorySpendRow[]>(`api/report/category-spend?year=${this.year}&month=${this.month}`).subscribe({
+      next: rows => {
+        this.rows = rows.filter(r => r.TotalSpent > 0);
+        this.totalSpent = this.rows.reduce((sum, r) => sum + r.TotalSpent, 0);
+        this.loaded = true;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loaded = true;
+        this.cdr.detectChanges();
+      }
     });
   }
 }

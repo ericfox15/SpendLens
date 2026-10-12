@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 interface SpendSummary {
@@ -101,18 +101,25 @@ export class DashboardComponent implements OnInit {
   loaded = false;
   monthLabel = '';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
     const now = new Date();
     this.monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' });
     const year = now.getFullYear();
     const month = now.getMonth() + 1;
-    this.http.get<SpendSummary[]>(`api/report/category-spend?year=${year}&month=${month}`).subscribe(data => {
-      this.rows = data.filter(r => r.TotalSpent > 0);
-      this.totalSpent = this.rows.reduce((s, r) => s + r.TotalSpent, 0);
-      this.overLimitCount = this.rows.filter(r => r.MonthlyLimit && r.TotalSpent > r.MonthlyLimit).length;
-      this.loaded = true;
+    this.http.get<SpendSummary[]>(`api/report/category-spend?year=${year}&month=${month}`).subscribe({
+      next: data => {
+        this.rows = data.filter(r => r.TotalSpent > 0);
+        this.totalSpent = this.rows.reduce((s, r) => s + r.TotalSpent, 0);
+        this.overLimitCount = this.rows.filter(r => r.MonthlyLimit && r.TotalSpent > r.MonthlyLimit).length;
+        this.loaded = true;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.loaded = true;
+        this.cdr.detectChanges();
+      }
     });
   }
 }

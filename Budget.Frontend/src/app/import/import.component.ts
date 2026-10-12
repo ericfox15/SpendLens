@@ -1,16 +1,37 @@
-import { Component } from '@angular/core';
-import { ImportResult } from '../shared/model/account.model';
-import { ImportHttpService } from '../core/http/pass.http.service';
+import { Component, ChangeDetectorRef } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+
+interface ImportedTransaction {
+  Date: string;
+  Description: string;
+  Amount: number;
+  Category: string;
+  AutoCategorized: boolean;
+}
+
+interface CategorySpend {
+  CategoryName: string;
+  TotalSpent: number;
+  Percentage: number;
+}
+
+interface ImportResult {
+  Transactions: ImportedTransaction[];
+  SpendByCategory: CategorySpend[];
+  ImportedCount: number;
+  SkippedCount: number;
+}
 
 @Component({
   selector: 'app-import',
   standalone: false,
   template: `
     <div class="container py-4">
-      <h2 class="mb-2"><i class="fas fa-file-import me-2"></i>Import Bank Statement</h2>
-      <p class="text-muted mb-4">
+      <h2 class="mb-1" style="color: var(--sr-purple-glow)">
+        <i class="fas fa-file-import me-2"></i>Import Bank Statement
+      </h2>
+      <p class="mb-4" style="color: var(--sr-muted)">
         Upload a CSV file from your bank. Expected format: <code>Date,Description,Amount</code>.
-        Most banks (Chase, Bank of America, Wells Fargo) export this format.
         Negative amounts are expenses; positive (deposits) are skipped.
       </p>
 
@@ -25,34 +46,39 @@ import { ImportHttpService } from '../core/http/pass.http.service';
             Import & Analyze
           </button>
           @if (selectedFile) {
-            <span class="ms-3 text-muted">{{ selectedFile.name }}</span>
+            <span class="ms-3" style="color: var(--sr-muted)">{{ selectedFile.name }}</span>
           }
         </div>
       </div>
 
+      @if (error) {
+        <div class="alert alert-danger mb-4">{{ error }}</div>
+      }
+
       @if (result) {
         <div class="alert alert-success mb-4">
-          ✅ Imported <strong>{{ result.ImportedCount }}</strong> transactions.
+          Imported <strong>{{ result.ImportedCount }}</strong> transactions.
           Skipped {{ result.SkippedCount }} rows (deposits, invalid lines).
         </div>
 
         <!-- Spending breakdown -->
         <div class="card mb-4">
-          <div class="card-header">
-            <strong>Spending Breakdown</strong>
-            <span class="text-muted ms-2">Total: \${{ totalSpent | number:'1.2-2' }}</span>
+          <div class="card-header d-flex justify-content-between">
+            <span>Spending Breakdown</span>
+            <span style="color: var(--sr-purple-glow)">Total: \${{ totalSpent | number:'1.2-2' }}</span>
           </div>
           <div class="card-body">
             @for (cat of result.SpendByCategory; track cat.CategoryName) {
               <div class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                  <span><strong>{{ cat.CategoryName }}</strong></span>
-                  <span>\${{ cat.TotalSpent | number:'1.2-2' }} <span class="text-primary">({{ cat.Percentage }}%)</span></span>
+                  <span style="font-weight: 600">{{ cat.CategoryName }}</span>
+                  <span>
+                    <span style="color: var(--sr-purple-glow)">\${{ cat.TotalSpent | number:'1.2-2' }}</span>
+                    <span style="color: var(--sr-muted)" class="ms-2">({{ cat.Percentage }}%)</span>
+                  </span>
                 </div>
-                <div class="progress" style="height:18px">
-                  <div class="progress-bar bg-primary" [style.width]="cat.Percentage + '%'">
-                    {{ cat.Percentage }}%
-                  </div>
+                <div class="progress" style="height: 10px">
+                  <div class="progress-bar" [style.width]="cat.Percentage + '%'"></div>
                 </div>
               </div>
             }
@@ -64,7 +90,7 @@ import { ImportHttpService } from '../core/http/pass.http.service';
           <div class="card-header">All Transactions ({{ result.Transactions.length }})</div>
           <div class="table-responsive">
             <table class="table table-sm table-hover mb-0">
-              <thead class="table-light">
+              <thead>
                 <tr>
                   <th>Date</th>
                   <th>Description</th>
@@ -76,15 +102,15 @@ import { ImportHttpService } from '../core/http/pass.http.service';
               <tbody>
                 @for (tx of result.Transactions; track $index) {
                   <tr>
-                    <td>{{ tx.Date }}</td>
+                    <td style="color: var(--sr-muted)">{{ tx.Date }}</td>
                     <td>{{ tx.Description }}</td>
-                    <td>\${{ tx.Amount | number:'1.2-2' }}</td>
-                    <td><span class="badge bg-light text-dark">{{ tx.Category }}</span></td>
+                    <td style="color: var(--sr-purple-glow); font-weight: 600">\${{ tx.Amount | number:'1.2-2' }}</td>
+                    <td><span class="badge bg-light">{{ tx.Category }}</span></td>
                     <td>
                       @if (tx.AutoCategorized) {
-                        <i class="fas fa-robot text-success" title="Auto-categorized"></i>
+                        <i class="fas fa-robot" style="color: #34d399" title="Auto-categorized"></i>
                       } @else {
-                        <i class="fas fa-question text-warning" title="Uncategorized"></i>
+                        <i class="fas fa-question" style="color: #fbbf24" title="Uncategorized"></i>
                       }
                     </td>
                   </tr>
@@ -102,29 +128,36 @@ export class ImportComponent {
   result: ImportResult | null = null;
   loading = false;
   totalSpent = 0;
+  error = '';
 
-  constructor(private importHttp: ImportHttpService) {}
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {}
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;
     this.selectedFile = input.files?.[0] ?? null;
     this.result = null;
+    this.error = '';
   }
 
   upload() {
     if (!this.selectedFile) return;
     this.loading = true;
-    this.importHttp.importBankStatement(this.selectedFile).subscribe({
+    this.error = '';
+
+    const formData = new FormData();
+    formData.append('file', this.selectedFile);
+
+    this.http.post<ImportResult>('api/import/bank-statement', formData).subscribe({
       next: result => {
-        console.log('Import response:', result);
         this.result = result;
-        this.totalSpent = (result.SpendByCategory || []).reduce((sum: number, c: any) => sum + c.TotalSpent, 0);
+        this.totalSpent = (result.SpendByCategory || []).reduce((sum, c) => sum + c.TotalSpent, 0);
         this.loading = false;
+        this.cdr.detectChanges();
       },
       error: err => {
-        console.error('Import error:', err);
-        alert('Import failed. Please check your CSV format.');
+        this.error = 'Import failed. Please check your CSV format.';
         this.loading = false;
+        this.cdr.detectChanges();
       }
     });
   }

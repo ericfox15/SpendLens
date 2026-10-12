@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectorRef } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 
 interface CategoryBreakdown {
@@ -147,8 +147,10 @@ export class TransactionRangeComponent {
   result: RangeResult | null = null;
   loading = false;
 
-  constructor(private http: HttpClient) {
-    this.http.get<{ AccountId: number; Name: string }[]>('api/account').subscribe(a => this.accounts = a);
+  constructor(private http: HttpClient, private cdr: ChangeDetectorRef) {
+    this.http.get<{ AccountId: number; Name: string }[]>('api/account').subscribe({
+      next: a => { this.accounts = a; this.cdr.detectChanges(); }
+    });
   }
 
   load() {
@@ -157,8 +159,8 @@ export class TransactionRangeComponent {
     const end = new Date(this.endDate + 'T23:59:59').toISOString();
     this.http.get<RangeResult>(`api/transaction-range?start=${start}&end=${end}&accountId=${this.accountId}`)
       .subscribe({
-        next: r => { this.result = r; this.loading = false; },
-        error: () => this.loading = false
+        next: r => { this.result = r; this.loading = false; this.cdr.detectChanges(); },
+        error: () => { this.loading = false; this.cdr.detectChanges(); }
       });
   }
 

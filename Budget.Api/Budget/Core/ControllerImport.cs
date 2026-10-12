@@ -162,6 +162,16 @@ public class ControllerImport(IOptions<RepositoryOptions> options, IRepositoryCa
             if (!DateTimeOffset.TryParse(tx.Date, out var parsedDate))
                 parsedDate = DateTimeOffset.UtcNow;
 
+            var note = $"Imported: {tx.Description}";
+
+            // Skip duplicates: same amount, date, and description
+            const string dupCheckSql = """
+                SELECT COUNT(1) FROM dbo.Payment
+                WHERE BillId IS NULL AND Amount = @Amount AND PaidAtUTC = @PaidAtUTC AND Note = @Note
+                """;
+            var exists = await connection.ExecuteScalarAsync<int>(dupCheckSql, new { Amount = tx.Amount, PaidAtUTC = parsedDate, Note = note });
+            if (exists > 0) { skipped++; continue; }
+
             const string insertSql = """
                 INSERT INTO dbo.Payment (BillId, AccountId, CategoryId, DueAtUTC, PaidAtUTC, Amount, Status, Note, ModifiedBy)
                 VALUES (NULL, @AccountId, @CategoryId, @PaidAtUTC, @PaidAtUTC, @Amount, 1, @Note, @ModifiedBy)
@@ -172,7 +182,7 @@ public class ControllerImport(IOptions<RepositoryOptions> options, IRepositoryCa
                 CategoryId = categoryEntity.CategoryId,
                 PaidAtUTC = parsedDate,
                 Amount = tx.Amount,
-                Note = $"Imported: {tx.Description}",
+                Note = note,
                 ModifiedBy = userId
             });
 
