@@ -1,0 +1,9 @@
+<Solution>
+  <Project Path="Budget.Api/Budget.Api.csproj" />
+  <Project Path="Budget.Application.Contracts/Budget.Application.Contracts.csproj" />
+  <Project Path="Budget.Database/Budget.Database.csproj" />
+  <Project Path="Budget.Infrastructure/Budget.Infrastructure.csproj" />
+  <Project Path="Budget.Pass/Budget.Pass.csproj" />
+  <Project Path="Budget.Shared/Budget.Shared.csproj" />
+  <Project Path="Budget.Test.Unit/Budget.Test.Unit.csproj" />
+</Solution>

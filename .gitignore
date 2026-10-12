@@ -1,0 +1,30 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.log
+
+# Node
+node_modules/
+
+# Angular
+.angular/
+dist/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# System
+.DS_Store
+Thumbs.db
+
+# Build output served by API
+Budget.Api/wwwroot/
+
+# Secrets
+appsettings.Development.json
+
+logs/
