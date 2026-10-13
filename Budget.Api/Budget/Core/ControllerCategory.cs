@@ -41,7 +41,14 @@ public class ControllerCategory(IServiceCategory serviceCategory, IRepositoryCat
     [Permission(EPermission.Write)]
     public async Task<IActionResult> DeleteCategory(int id)
     {
-        await serviceCategory.DeleteCategoryAsync(id);
-        return Ok();
+        try
+        {
+            await serviceCategory.DeleteCategoryAsync(id);
+            return Ok();
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 547)
+        {
+            return BadRequest(new { Message = "Cannot delete this category — it has transactions linked to it. Reassign them first." });
+        }
     }
 }

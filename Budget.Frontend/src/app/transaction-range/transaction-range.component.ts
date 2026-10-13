@@ -86,7 +86,7 @@ interface RangeResult {
             @for (cat of result.Categories; track cat.CategoryId) {
               <div class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                  <span style="font-weight: 600">{{ cat.CategoryName }}</span>
+                  <span style="font-weight: 600; color: var(--sr-purple-light)">{{ cat.CategoryName }}</span>
                   <span>
                     <span style="color: var(--sr-purple-glow)">\${{ cat.TotalSpent | number:'1.2-2' }}</span>
                     <span style="color: var(--sr-muted)" class="ms-2">({{ cat.Percentage }}%)</span>

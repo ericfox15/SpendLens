@@ -71,7 +71,7 @@ interface ImportResult {
             @for (cat of result.SpendByCategory; track cat.CategoryName) {
               <div class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                  <span style="font-weight: 600">{{ cat.CategoryName }}</span>
+                  <span style="font-weight: 600; color: var(--sr-purple-light, #c4b5fd)">{{ cat.CategoryName }}</span>
                   <span>
                     <span style="color: var(--sr-purple-glow)">\${{ cat.TotalSpent | number:'1.2-2' }}</span>
                     <span style="color: var(--sr-muted)" class="ms-2">({{ cat.Percentage }}%)</span>
@@ -96,7 +96,6 @@ interface ImportResult {
                   <th>Description</th>
                   <th>Amount</th>
                   <th>Category</th>
-                  <th>Auto?</th>
                 </tr>
               </thead>
               <tbody>
@@ -105,14 +104,7 @@ interface ImportResult {
                     <td style="color: var(--sr-muted)">{{ tx.Date }}</td>
                     <td>{{ tx.Description }}</td>
                     <td style="color: var(--sr-purple-glow); font-weight: 600">\${{ tx.Amount | number:'1.2-2' }}</td>
-                    <td><span class="badge bg-light">{{ tx.Category }}</span></td>
-                    <td>
-                      @if (tx.AutoCategorized) {
-                        <i class="fas fa-robot" style="color: #34d399" title="Auto-categorized"></i>
-                      } @else {
-                        <i class="fas fa-question" style="color: #fbbf24" title="Uncategorized"></i>
-                      }
-                    </td>
+                    <td><span class="badge" style="background: rgba(139,92,246,0.2); color: var(--sr-purple-light, #c4b5fd)">{{ tx.Category }}</span></td>
                   </tr>
                 }
               </tbody>

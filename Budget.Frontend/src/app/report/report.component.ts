@@ -45,7 +45,7 @@ interface CategorySpendRow {
             @for (row of rows; track row.CategoryId) {
               <div class="mb-3">
                 <div class="d-flex justify-content-between mb-1">
-                  <span style="font-weight: 600">{{ row.CategoryName }}</span>
+                  <span style="font-weight: 600; color: var(--sr-purple-light)">{{ row.CategoryName }}</span>
                   <span>
                     <span style="color: var(--sr-purple-glow)">\${{ row.TotalSpent | number:'1.2-2' }}</span>
                     <span style="color: var(--sr-muted)" class="ms-2">({{ row.Percentage }}%)</span>

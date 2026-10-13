@@ -103,6 +103,9 @@ export class CategoryComponent implements OnInit {
 
   remove(id: number) {
     if (confirm('Delete this category?'))
-      this.http.delete(`api/category/${id}`).subscribe(() => this.load());
+      this.http.delete(`api/category/${id}`).subscribe({
+        next: () => this.load(),
+        error: (err) => { alert(err.error?.Message || 'Delete failed'); }
+      });
   }
 }
